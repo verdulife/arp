@@ -66,7 +66,7 @@
 			{#each modes as m (m)}
 				<button
 					class="flex flex-1 items-center justify-center rounded py-1 text-xs transition-colors
-            {mode === m
+            {mode.current === m
 						? 'bg-background text-foreground shadow-sm'
 						: 'text-muted-foreground hover:text-foreground'}"
 					onclick={() => setMode(m)}
