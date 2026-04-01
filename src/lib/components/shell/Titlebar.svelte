@@ -13,7 +13,7 @@
 		<span class="text-[10px] font-medium text-background">A</span>
 	</div>
 
-	<div class="h-4 w-px bg-border" />
+	<div class="h-4 w-px bg-border"></div>
 
 	<nav class="flex items-center gap-2 text-sm">
 		<span class="text-muted-foreground">{tool.family}</span>
@@ -29,7 +29,7 @@
 			seed: {seed}
 		</button>
 
-		<div class="h-4 w-px bg-border" />
+		<div class="h-4 w-px bg-border"></div>
 
 		<button
 			class="rounded-md border px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent"

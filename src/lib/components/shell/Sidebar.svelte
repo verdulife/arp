@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { registry, families } from '$lib/registry';
-	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	let { activeslug }: { activeslug: string } = $props();
 
@@ -24,7 +24,7 @@
 	</div>
 
 	<nav class="flex-1 overflow-y-auto py-2">
-		{#each families as family}
+		{#each families as family (family)}
 			{@const tools = registry.filter((t) => t.family === family)}
 			<div class="mb-1">
 				<p
@@ -32,13 +32,13 @@
 				>
 					{family}
 				</p>
-				{#each tools as tool}
-					<button
+				{#each tools as tool (tool.slug)}
+					<a
+						href={resolve(`/tools/${tool.slug}`)}
 						class="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors hover:bg-accent
-              {activeslug === tool.slug
+    {activeslug === tool.slug
 							? 'border-l-2 border-foreground bg-accent'
 							: 'border-l-2 border-transparent'}"
-						onclick={() => goto(`/tools/${tool.slug}`)}
 					>
 						<div
 							class="flex h-5 w-5 shrink-0 items-center justify-center rounded {familyColors[
@@ -52,7 +52,7 @@
 						>
 							{tool.name}
 						</span>
-					</button>
+					</a>
 				{/each}
 			</div>
 		{/each}

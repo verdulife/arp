@@ -41,11 +41,14 @@
 	const zoomPercent = $derived(Math.round(scale * 100));
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	class="relative flex-1 overflow-hidden bg-[#f8f8f7] dark:bg-[#111110]"
 	style="cursor: {isPanning ? 'grabbing' : 'default'}"
-	role="region"
-	aria-label="Canvas"
+	role="application"
+	aria-label="Canvas de Arp"
+	tabindex="0"
 	{onwheel}
 	{onmousedown}
 	{onmousemove}
@@ -57,7 +60,7 @@
       background-image: radial-gradient(circle, color-mix(in srgb, currentColor 15%, transparent) 1px, transparent 1px);
       background-size: 24px 24px;
     "
-	/>
+	></div>
 
 	<div
 		class="absolute top-1/2 left-1/2"
@@ -68,7 +71,7 @@
 			width={800}
 			height={640}
 			class="rounded-sm border bg-white shadow-sm dark:bg-zinc-950"
-		/>
+		></canvas>
 	</div>
 
 	<div
@@ -76,15 +79,21 @@
 	>
 		<button
 			class="px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent"
-			onclick={() => (scale = Math.max(scale * 0.9, 0.1))}>−</button
+			onclick={() => (scale = Math.max(scale * 0.9, 0.1))}
 		>
+			−
+		</button>
 		<button
 			class="border-x px-3 py-1.5 font-mono text-muted-foreground transition-colors hover:bg-accent"
-			onclick={resetView}>{zoomPercent}%</button
+			onclick={resetView}
 		>
+			{zoomPercent}%
+		</button>
 		<button
 			class="px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent"
-			onclick={() => (scale = Math.min(scale * 1.1, 8))}>+</button
+			onclick={() => (scale = Math.min(scale * 1.1, 8))}
 		>
+			+
+		</button>
 	</div>
 </div>

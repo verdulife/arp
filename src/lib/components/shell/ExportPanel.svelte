@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { Slider } from '$lib/components/ui/slider';
 	import type { ExportOptions } from '$lib/types/tool';
 
 	let { open = $bindable() }: { open: boolean } = $props();
@@ -45,7 +44,7 @@
 					Tamaño
 				</p>
 				<div class="flex gap-2">
-					{#each presets as preset}
+					{#each presets as preset (preset.label)}
 						<button
 							class="flex-1 rounded-md border py-1.5 text-xs transition-colors
                 {selectedPreset === preset.label
@@ -88,7 +87,7 @@
 					<span class="font-mono text-[10px] text-muted-foreground">{options.dpi} dpi</span>
 				</div>
 				<div class="flex gap-2">
-					{#each [72, 150, 300] as dpi}
+					{#each [72, 150, 300] as dpi (dpi)}
 						<button
 							class="flex-1 rounded-md border py-1.5 text-xs transition-colors
                 {options.dpi === dpi
