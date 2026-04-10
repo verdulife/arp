@@ -1,11 +1,12 @@
 <script lang="ts">
 	import type { ToolMeta } from '$lib/types/tool';
+	import { useToolState } from '$lib/state/toolState.svelte';
 	import ExportPanel from './ExportPanel.svelte';
 
 	let { tool }: { tool: ToolMeta } = $props();
-	let exportOpen = $state(false);
 
-	const seed = $state(Math.random().toString(36).slice(2, 8));
+	const toolState = useToolState();
+	let exportOpen = $state(false);
 </script>
 
 <header class="flex h-10 shrink-0 items-center gap-3 border-b bg-background px-4">
@@ -24,9 +25,9 @@
 	<div class="ml-auto flex items-center gap-2">
 		<button
 			class="rounded-full border px-3 py-0.5 font-mono text-[11px] text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-			onclick={() => {}}
+			onclick={() => toolState.regenerateSeed()}
 		>
-			seed: {seed}
+			seed: {toolState.seed}
 		</button>
 
 		<div class="h-4 w-px bg-border"></div>

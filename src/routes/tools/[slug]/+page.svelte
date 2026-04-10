@@ -1,11 +1,19 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { page } from '$app/state';
+	import { createToolState, setToolState } from '$lib/state/toolState.svelte';
 	import Titlebar from '$lib/components/shell/Titlebar.svelte';
 	import Sidebar from '$lib/components/shell/Sidebar.svelte';
 	import Canvas from '$lib/components/shell/Canvas.svelte';
 	import Inspector from '$lib/components/shell/Inspector.svelte';
 
 	let { data }: { data: PageData } = $props();
+
+	const toolState = $derived(createToolState(data.tool.slug, page.url.searchParams));
+
+	$effect(() => {
+		setToolState(toolState);
+	});
 </script>
 
 <div class="flex h-full flex-col">

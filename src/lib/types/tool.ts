@@ -24,9 +24,15 @@ export interface ToolMeta {
 export interface ExportOptions {
   format: 'png'
   dpi: 72 | 150 | 300
-  width: number
-  height: number
-  unit: 'mm' | 'in'
+  width: number        // siempre mm internamente
+  height: number       // siempre mm internamente
+  unit: 'px' | 'mm' | 'in'
 }
 
 export type ToolParams = Record<string, number | string>
+
+export interface ToolState {
+  seed: string
+  params: ToolParams
+  hasPending: boolean
+}
