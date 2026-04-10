@@ -1,3 +1,5 @@
+import type { Component } from "svelte"
+
 export type ParamType = 'slider' | 'color' | 'select' | 'upload'
 
 export interface ParamDefinition {
@@ -35,4 +37,29 @@ export interface ToolState {
   seed: string
   params: ToolParams
   hasPending: boolean
+}
+
+export interface WorkerRequest {
+  mode: 'preview' | 'export'
+  params: ToolParams
+  seed: string
+  exportOptions?: ExportOptions
+  transferables?: {
+    image?: ImageBitmap
+    element?: ImageBitmap
+  }
+}
+
+export interface WorkerResponse {
+  type: 'result' | 'error' | 'progress'
+  svg?: string
+  progress?: number
+  error?: string
+}
+
+export interface ToolModule {
+  meta: ToolMeta
+  worker: () => Worker
+  previewSize: { width: number; height: number }
+  component: Component
 }

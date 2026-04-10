@@ -1,10 +1,43 @@
 <script lang="ts">
+	import { useWorkerBridge } from '$lib/workers/bridge.svelte';
+
 	let scale = $state(1);
 	let offsetX = $state(0);
 	let offsetY = $state(0);
 	let isPanning = $state(false);
 	let lastX = $state(0);
 	let lastY = $state(0);
+
+	const bridge = useWorkerBridge();
+
+	let canvasEl = $state<HTMLCanvasElement | null>(null);
+
+	async function renderSVG(svg: string) {
+		if (!canvasEl) return;
+		const ctx = canvasEl.getContext('2d');
+		if (!ctx) return;
+
+		const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+
+		const img = new Image();
+		img.onload = () => {
+			ctx.clearRect(0, 0, canvasEl!.width, canvasEl!.height);
+			ctx.drawImage(img, 0, 0, canvasEl!.width, canvasEl!.height);
+			URL.revokeObjectURL(url);
+		};
+		img.onerror = () => {
+			URL.revokeObjectURL(url);
+			console.error('Error al cargar el SVG');
+		};
+		img.src = url;
+	}
+
+	$effect(() => {
+		if (bridge.status === 'done' && bridge.result) {
+			renderSVG(bridge.result);
+		}
+	});
 
 	function onwheel(e: WheelEvent) {
 		e.preventDefault();
@@ -67,11 +100,18 @@
 		style="transform: translate(calc(-50% + {offsetX}px), calc(-50% + {offsetY}px)) scale({scale})"
 	>
 		<canvas
+			bind:this={canvasEl}
 			id="arp-canvas"
 			width={800}
 			height={640}
 			class="rounded-sm border bg-white shadow-sm dark:bg-zinc-950"
 		></canvas>
+
+		{#if bridge.status === 'running'}
+			<div class="absolute inset-0 flex items-center justify-center rounded-sm bg-background/50">
+				<span class="text-xs text-muted-foreground">Generando...</span>
+			</div>
+		{/if}
 	</div>
 
 	<div
@@ -79,21 +119,15 @@
 	>
 		<button
 			class="px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent"
-			onclick={() => (scale = Math.max(scale * 0.9, 0.1))}
+			onclick={() => (scale = Math.max(scale * 0.9, 0.1))}>−</button
 		>
-			−
-		</button>
 		<button
 			class="border-x px-3 py-1.5 font-mono text-muted-foreground transition-colors hover:bg-accent"
-			onclick={resetView}
+			onclick={resetView}>{zoomPercent}%</button
 		>
-			{zoomPercent}%
-		</button>
 		<button
 			class="px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent"
-			onclick={() => (scale = Math.min(scale * 1.1, 8))}
+			onclick={() => (scale = Math.min(scale * 1.1, 8))}>+</button
 		>
-			+
-		</button>
 	</div>
 </div>

@@ -1,13 +1,45 @@
 <script lang="ts">
-	import type { ToolMeta } from '$lib/types/tool';
+	import type { ToolMeta, WorkerRequest } from '$lib/types/tool';
 	import { useToolState } from '$lib/state/toolState.svelte';
+	import { useWorkerBridge } from '$lib/workers/bridge.svelte';
 	import { Slider } from '$lib/components/ui/slider';
 	import { Separator } from '$lib/components/ui/separator';
 
 	let { tool }: { tool: ToolMeta } = $props();
 
-	const state = useToolState();
+	const toolState = useToolState();
+	const bridge = useWorkerBridge();
 	const groups = $derived([...new Set(tool.params.map((p) => p.group ?? 'General'))]);
+
+	async function handleUpload(key: string, file: File) {
+		await toolState.setUpload(key, file);
+	}
+
+	async function generate() {
+		toolState.generate();
+
+		const transferables: WorkerRequest['transferables'] = {};
+		const transferList: Transferable[] = [];
+
+		if (toolState.uploads['image']) {
+			const bitmap = await createImageBitmap(toolState.uploads['image'].file);
+			transferables.image = bitmap;
+			transferList.push(bitmap);
+		}
+
+		if (toolState.uploads['element']) {
+			const bitmap = await createImageBitmap(toolState.uploads['element'].file);
+			transferables.element = bitmap;
+			transferList.push(bitmap);
+		}
+
+		bridge.run({
+			mode: 'preview',
+			params: JSON.parse(JSON.stringify(toolState.params)),
+			seed: toolState.seed,
+			transferables
+		});
+	}
 </script>
 
 <aside class="flex w-60 shrink-0 flex-col overflow-hidden border-l bg-background">
@@ -28,7 +60,7 @@
 							<div class="mb-1.5 flex justify-between">
 								<span class="text-xs text-muted-foreground">{param.label}</span>
 								<span class="font-mono text-[10px] text-muted-foreground">
-									{state.params[param.key]}{param.unit ?? ''}
+									{toolState.params[param.key]}{param.unit ?? ''}
 								</span>
 							</div>
 							<Slider
@@ -36,8 +68,8 @@
 								min={param.min}
 								max={param.max}
 								step={param.step}
-								value={state.params[param.key] as number}
-								onValueChange={(v) => state.setParam(param.key, v)}
+								value={toolState.params[param.key] as number}
+								onValueChange={(v) => toolState.setParam(param.key, v)}
 							/>
 						{:else if param.type === 'color'}
 							<div class="mb-1.5">
@@ -46,13 +78,13 @@
 							<div class="flex items-center gap-2">
 								<div
 									class="h-6 w-6 shrink-0 cursor-pointer rounded border"
-									style="background: {state.params[param.key]}"
+									style="background: {toolState.params[param.key]}"
 								></div>
 								<input
 									type="text"
 									class="w-full rounded border bg-muted px-2 py-1 font-mono text-xs outline-none focus:border-ring"
-									value={state.params[param.key]}
-									oninput={(e) => state.setParam(param.key, e.currentTarget.value)}
+									value={toolState.params[param.key]}
+									oninput={(e) => toolState.setParam(param.key, e.currentTarget.value)}
 								/>
 							</div>
 						{:else if param.type === 'upload'}
@@ -60,11 +92,39 @@
 								<span class="text-xs text-muted-foreground">{param.label}</span>
 							</div>
 							<div
-								class="cursor-pointer rounded-md border border-dashed p-3 text-center transition-colors hover:bg-accent"
+								class="cursor-pointer rounded-md border border-dashed p-3 text-center transition-colors hover:bg-accent
+    {toolState.uploads[param.key] ? 'border-foreground' : 'border-border'}"
+								role="button"
+								tabindex="0"
+								ondragover={(e) => e.preventDefault()}
+								ondrop={(e) => {
+									e.preventDefault();
+									const file = e.dataTransfer?.files[0];
+									if (file) handleUpload(param.key, file);
+								}}
+								onclick={() => {
+									const input = document.createElement('input');
+									input.type = 'file';
+									input.accept = 'image/png,image/jpeg,image/svg+xml';
+									input.onchange = () => {
+										const file = input.files?.[0];
+										if (file) handleUpload(param.key, file);
+									};
+									input.click();
+								}}
+								onkeydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click();
+								}}
 							>
-								<p class="text-[11px] text-muted-foreground">
-									Arrastra o haz clic<br /><span class="text-foreground">PNG, JPG, SVG</span>
-								</p>
+								{#if toolState.uploads[param.key]}
+									<p class="truncate text-[11px] font-medium text-foreground">
+										{toolState.uploads[param.key].name}
+									</p>
+								{:else}
+									<p class="text-[11px] text-muted-foreground">
+										Arrastra o haz clic<br /><span class="text-foreground">PNG, JPG, SVG</span>
+									</p>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -78,18 +138,18 @@
 	<div class="flex gap-2 border-t p-3">
 		<button
 			class="flex-1 rounded-md border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent"
-			onclick={() => state.reset()}
+			onclick={() => toolState.reset()}
 		>
 			Resetear
 		</button>
 		<button
 			class="flex-1 rounded-md px-3 py-1.5 text-xs transition-colors
-			{state.hasPending
+    {toolState.hasPending
 				? 'bg-foreground text-background hover:opacity-90'
 				: 'border bg-foreground text-background hover:opacity-90'}"
-			onclick={() => state.generate()}
+			onclick={generate}
 		>
-			Generar
+			{bridge.status === 'running' ? 'Calculando...' : 'Generar'}
 		</button>
 	</div>
 </aside>

@@ -46,6 +46,7 @@ class ToolStateManager {
   seed = $state<string>('')
   params = $state<ToolParams>({})
   hasPending = $state<boolean>(false)
+  uploads = $state<Record<string, { name: string; file: File; width: number; height: number }>>({})
 
   constructor(slug: string, urlParams?: URLSearchParams) {
     this.slug = slug
@@ -113,6 +114,24 @@ class ToolStateManager {
     return entries
       .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
       .join('&')
+  }
+
+  setUpload(key: string, file: File): Promise<void> {
+    return createImageBitmap(file).then(bitmap => {
+      this.uploads[key] = {
+        name: file.name,
+        file,
+        width: bitmap.width,
+        height: bitmap.height,
+      }
+      bitmap.close()
+      this.hasPending = true
+    })
+  }
+
+  clearUpload(key: string): void {
+    delete this.uploads[key]
+    this.hasPending = true
   }
 }
 

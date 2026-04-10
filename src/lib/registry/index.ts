@@ -1,4 +1,4 @@
-import type { ToolMeta } from '$lib/types/tool'
+import type { ToolMeta, ToolModule } from '$lib/types/tool'
 
 export const registry: ToolMeta[] = [
   {
@@ -62,4 +62,26 @@ export const families = [...new Set(registry.map(t => t.family))]
 
 export function getTool(slug: string): ToolMeta | undefined {
   return registry.find(t => t.slug === slug)
+}
+
+export function getDefaultParams(slug: string): Record<string, number | string> {
+  const tool = getTool(slug)
+  if (!tool) return {}
+  return Object.fromEntries(tool.params.map(p => [p.key, p.default]))
+}
+
+export function getFamilyColor(family: string): string {
+  const colors: Record<string, string> = {
+    'Densidad': 'bg-violet-100 dark:bg-violet-950',
+    'Ruido y campo': 'bg-emerald-100 dark:bg-emerald-950',
+    'Líneas': 'bg-amber-100 dark:bg-amber-950',
+    'Tipografía': 'bg-rose-100 dark:bg-rose-950',
+    'Física': 'bg-sky-100 dark:bg-sky-950',
+    '3D e isometría': 'bg-pink-100 dark:bg-pink-950',
+  }
+  return colors[family] ?? 'bg-muted'
+}
+
+export const toolModules: Record<string, () => Promise<{ default: ToolModule }>> = {
+  'halftone': () => import('$lib/tools/halftone/index'),
 }

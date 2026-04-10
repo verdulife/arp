@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { page } from '$app/state';
+	import { untrack } from 'svelte';
 	import { createToolState, setToolState } from '$lib/state/toolState.svelte';
+	import { createWorkerBridge, setWorkerBridge } from '$lib/workers/bridge.svelte';
 	import Titlebar from '$lib/components/shell/Titlebar.svelte';
 	import Sidebar from '$lib/components/shell/Sidebar.svelte';
 	import Canvas from '$lib/components/shell/Canvas.svelte';
@@ -9,10 +10,14 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const toolState = $derived(createToolState(data.tool.slug, page.url.searchParams));
-
-	$effect(() => {
+	untrack(() => {
+		const toolState = createToolState(data.tool.slug, data.urlParams);
 		setToolState(toolState);
+
+		if (data.toolModule) {
+			const bridge = createWorkerBridge(data.toolModule.worker);
+			setWorkerBridge(bridge);
+		}
 	});
 </script>
 
