@@ -1,12 +1,18 @@
 <script lang="ts">
-	import * as Dialog from '$lib/components/ui/dialog';
 	import type { ExportOptions } from '$lib/types/tool';
+	import { svgToCanvas, canvasToPngWithDpi, downloadBlob, buildFilename } from '$lib/utils/export';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { getCanvasSize, formatDisplay, mmToPx, toMm } from '$lib/utils/resolution';
 	import { useToolState } from '$lib/state/toolState.svelte';
+	import { useWorkerBridge } from '$lib/workers/bridge.svelte';
 
-	let { open = $bindable() }: { open: boolean } = $props();
+	let { open = $bindable(), supportsSvg = false }: { open: boolean; supportsSvg: boolean } =
+		$props();
 
+	const bridge = useWorkerBridge();
 	const toolState = useToolState();
+
+	let exporting = $state(false);
 
 	type FitMode = 'contain' | 'cover';
 
@@ -95,6 +101,27 @@
 		}
 	}
 
+	async function handleExport() {
+		if (!bridge.result) return;
+		exporting = true;
+
+		try {
+			if (options.format === 'svg') {
+				const blob = new Blob([bridge.result], { type: 'image/svg+xml;charset=utf-8' });
+				downloadBlob(blob, buildFilename(toolState.slug, toolState.seed, options.dpi, 'svg'));
+			} else {
+				const canvas = await svgToCanvas(bridge.result, finalSize.width, finalSize.height);
+				const blob = await canvasToPngWithDpi(canvas, options.dpi);
+				downloadBlob(blob, buildFilename(toolState.slug, toolState.seed, options.dpi, 'png'));
+			}
+		} catch (err) {
+			console.error('Error al exportar:', err);
+		} finally {
+			exporting = false;
+			open = false;
+		}
+	}
+
 	const showFitMode = $derived(selectedPreset !== 'Original' && selectedPreset !== 'Custom');
 </script>
 
@@ -126,6 +153,27 @@
 					{/each}
 				</div>
 			</div>
+
+			{#if supportsSvg}
+				<div>
+					<p class="mb-2 text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+						Formato
+					</p>
+					<div class="flex gap-2">
+						{#each ['png', 'svg'] as const as fmt (fmt)}
+							<button
+								class="flex-1 rounded-md border py-1.5 text-xs uppercase transition-colors
+            {options.format === fmt
+									? 'border-foreground bg-foreground text-background'
+									: 'text-muted-foreground hover:bg-accent'}"
+								onclick={() => (options.format = fmt)}
+							>
+								{fmt}
+							</button>
+						{/each}
+					</div>
+				</div>
+			{/if}
 
 			{#if showFitMode}
 				<div>
@@ -169,39 +217,47 @@
 				</div>
 			{/if}
 
-			<div>
-				<div class="mb-2 flex justify-between">
-					<p class="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
-						Resolución
-					</p>
-					<span class="font-mono text-[10px] text-muted-foreground">{options.dpi} dpi</span>
+			{#if options.format === 'png'}
+				<div>
+					<div class="mb-2 flex justify-between">
+						<p class="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+							Resolución
+						</p>
+						<span class="font-mono text-[10px] text-muted-foreground">{options.dpi} dpi</span>
+					</div>
+					<div class="flex gap-2">
+						{#each [72, 150, 300] as dpi (dpi)}
+							<button
+								class="flex-1 rounded-md border py-1.5 text-xs transition-colors
+            {options.dpi === dpi
+									? 'border-foreground bg-foreground text-background'
+									: 'text-muted-foreground hover:bg-accent'}"
+								onclick={() => (options.dpi = dpi as 72 | 150 | 300)}
+							>
+								{dpi}
+							</button>
+						{/each}
+					</div>
 				</div>
-				<div class="flex gap-2">
-					{#each [72, 150, 300] as dpi (dpi)}
-						<button
-							class="flex-1 rounded-md border py-1.5 text-xs transition-colors
-                {options.dpi === dpi
-								? 'border-foreground bg-foreground text-background'
-								: 'text-muted-foreground hover:bg-accent'}"
-							onclick={() => (options.dpi = dpi as 72 | 150 | 300)}
-						>
-							{dpi}
-						</button>
-					{/each}
-				</div>
-			</div>
+			{/if}
 
 			<div class="space-y-1 rounded-md bg-muted px-3 py-2">
-				<p class="font-mono text-[11px] text-muted-foreground">
-					{finalSize.width} × {finalSize.height} px — PNG
-				</p>
-				{#if imageUpload}
+				{#if options.format === 'png'}
 					<p class="font-mono text-[11px] text-muted-foreground">
-						{formatDisplay(options.width, options.unit, options.dpi)} × {formatDisplay(
-							options.height,
-							options.unit,
-							options.dpi
-						)}
+						{finalSize.width} × {finalSize.height} px — PNG
+					</p>
+					{#if imageUpload}
+						<p class="font-mono text-[11px] text-muted-foreground">
+							{formatDisplay(options.width, options.unit, options.dpi)} × {formatDisplay(
+								options.height,
+								options.unit,
+								options.dpi
+							)}
+						</p>
+					{/if}
+				{:else}
+					<p class="font-mono text-[11px] text-muted-foreground">
+						{bridge.resultWidth} × {bridge.resultHeight} px — SVG vectorial
 					</p>
 				{/if}
 			</div>
@@ -209,10 +265,11 @@
 
 		<Dialog.Footer>
 			<button
-				class="w-full rounded-md bg-foreground py-2 text-sm text-background transition-opacity hover:opacity-90"
-				onclick={() => (open = false)}
+				class="w-full rounded-md bg-foreground py-2 text-sm text-background transition-opacity hover:opacity-90 disabled:opacity-40"
+				onclick={handleExport}
+				disabled={exporting || !bridge.result}
 			>
-				Exportar PNG
+				{exporting ? 'Exportando...' : `Exportar ${options.format.toUpperCase()}`}
 			</button>
 		</Dialog.Footer>
 	</Dialog.Content>

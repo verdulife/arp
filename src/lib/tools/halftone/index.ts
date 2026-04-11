@@ -9,5 +9,6 @@ export default {
   worker: () => new Worker(
     new URL('./worker.ts', import.meta.url),
     { type: 'module' }
-  )
+  ),
+  supportsSvg: true
 } satisfies ToolModule

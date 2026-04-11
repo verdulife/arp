@@ -1,12 +1,13 @@
 <script lang="ts">
-	import type { ToolMeta } from '$lib/types/tool';
+	import type { ToolMeta, ToolModule } from '$lib/types/tool';
 	import { useToolState } from '$lib/state/toolState.svelte';
 	import ExportPanel from './ExportPanel.svelte';
 
-	let { tool }: { tool: ToolMeta } = $props();
-
+	let { tool, toolModule }: { tool: ToolMeta; toolModule: ToolModule | null } = $props();
 	const toolState = useToolState();
 	let exportOpen = $state(false);
+
+	const supportsSvg = $derived(toolModule?.supportsSvg ?? false);
 </script>
 
 <header class="flex h-10 shrink-0 items-center gap-3 border-b bg-background px-4">
@@ -41,4 +42,4 @@
 	</div>
 </header>
 
-<ExportPanel bind:open={exportOpen} />
+<ExportPanel bind:open={exportOpen} {supportsSvg} />

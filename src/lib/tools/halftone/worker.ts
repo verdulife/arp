@@ -40,19 +40,8 @@ function getAverageLuminance(
   return count > 0 ? total / count : 255
 }
 
-function buildCircleElement(
-  cx: number,
-  cy: number,
-  radius: number,
-  color: string,
-  rotation: number
-): string {
-  if (radius <= 0) return ''
-  return `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="${color}" transform="rotate(${rotation} ${cx} ${cy})"/>`
-}
-
 self.onmessage = (e: MessageEvent<WorkerRequest>) => {
-  const { params, transferables } = e.data
+  const { params, transferables, elementChar, elementSvg } = e.data
 
   const {
     cellSize = 24,
@@ -63,13 +52,13 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
     color = '#1a1a1a',
   } = params as unknown as HalftoneParams
 
-  const WIDTH = 800
-  const HEIGHT = 640
-
-  // Obtener datos de imagen
+  let WIDTH = 800
+  let HEIGHT = 640
   let imageData: ImageData | null = null
 
   if (transferables?.image) {
+    WIDTH = transferables.image.width
+    HEIGHT = transferables.image.height
     const offscreen = new OffscreenCanvas(WIDTH, HEIGHT)
     const ctx = offscreen.getContext('2d')!
     ctx.drawImage(transferables.image, 0, 0, WIDTH, HEIGHT)
@@ -77,7 +66,6 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
     transferables.image.close()
   }
 
-  // Si no hay imagen, usar gradiente sintético
   if (!imageData) {
     const offscreen = new OffscreenCanvas(WIDTH, HEIGHT)
     const ctx = offscreen.getContext('2d')!
@@ -90,34 +78,64 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
   }
 
   const { data, width, height } = imageData
-
   const cols = Math.ceil(width / cellSize)
   const rows = Math.ceil(height / cellSize)
-
   const elements: string[] = []
+
+  // Extraemos el contenido interno del SVG elemento para usarlo en <symbol>
+  let symbolDef = ''
+  let useSymbol = false
+
+  if (elementSvg) {
+    // Extraemos viewBox y contenido interno del SVG
+    const viewBoxMatch = elementSvg.match(/viewBox="([^"]+)"/)
+    const viewBox = viewBoxMatch ? viewBoxMatch[1] : '0 0 100 100'
+    const innerMatch = elementSvg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/)
+    const inner = innerMatch ? innerMatch[1] : ''
+
+    symbolDef = `<symbol id="el" viewBox="${viewBox}">${inner}</symbol>`
+    useSymbol = true
+  }
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const luminance = getAverageLuminance(data, width, height, col, row, cellSize)
-
-      // Luminosidad 0 (negro) → maxScale, luminosidad 255 (blanco) → minScale
       const t = 1 - luminance / 255
       const scale = minScale + t * (maxScale - minScale)
-      const radius = (cellSize / 2) * scale
+      const size = cellSize * scale
+
+      if (size <= 0) continue
 
       const jitterX = jitter > 0 ? (Math.random() - 0.5) * jitter : 0
       const jitterY = jitter > 0 ? (Math.random() - 0.5) * jitter : 0
 
       const cx = col * cellSize + cellSize / 2 + jitterX
       const cy = row * cellSize + cellSize / 2 + jitterY
+      const x = cx - size / 2
+      const y = cy - size / 2
 
-      elements.push(buildCircleElement(cx, cy, radius, String(color), Number(rotation)))
+      if (useSymbol) {
+        elements.push(
+          `<use href="#el" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${size.toFixed(2)}" height="${size.toFixed(2)}" fill="${color}" transform="rotate(${rotation} ${cx.toFixed(2)} ${cy.toFixed(2)})"/>`
+        )
+      } else if (elementChar) {
+        elements.push(
+          `<text x="${cx.toFixed(2)}" y="${cy.toFixed(2)}" font-family="${elementChar.font}" font-size="${(size * 0.85).toFixed(2)}" fill="${color}" text-anchor="middle" dominant-baseline="central" transform="rotate(${rotation} ${cx.toFixed(2)} ${cy.toFixed(2)})">${elementChar.value}</text>`
+        )
+      } else {
+        elements.push(
+          `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(size / 2).toFixed(2)}" fill="${color}" transform="rotate(${rotation} ${cx.toFixed(2)} ${cy.toFixed(2)})"/>`
+        )
+      }
     }
   }
 
+  const defs = symbolDef ? `<defs>${symbolDef}</defs>` : ''
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" style="background:white">
+  ${defs}
   ${elements.filter(Boolean).join('\n  ')}
 </svg>`
 
-  self.postMessage({ type: 'result', svg })
+  self.postMessage({ type: 'result', svg, width: WIDTH, height: HEIGHT })
 }

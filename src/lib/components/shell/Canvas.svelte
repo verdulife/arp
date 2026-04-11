@@ -9,8 +9,11 @@
 	let lastY = $state(0);
 
 	const bridge = useWorkerBridge();
-
 	let canvasEl = $state<HTMLCanvasElement | null>(null);
+
+	// El canvas adopta las dimensiones del resultado
+	const canvasWidth = $derived(bridge.resultWidth);
+	const canvasHeight = $derived(bridge.resultHeight);
 
 	async function renderSVG(svg: string) {
 		if (!canvasEl) return;
@@ -101,9 +104,8 @@
 	>
 		<canvas
 			bind:this={canvasEl}
-			id="arp-canvas"
-			width={800}
-			height={640}
+			width={canvasWidth}
+			height={canvasHeight}
 			class="rounded-sm border bg-white shadow-sm dark:bg-zinc-950"
 		></canvas>
 

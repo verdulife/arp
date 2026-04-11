@@ -9,6 +9,8 @@ class WorkerBridge {
   status = $state<BridgeStatus>('idle')
   error = $state<string | null>(null)
   result = $state<string | null>(null)
+  resultWidth = $state<number>(800)
+  resultHeight = $state<number>(640)
 
   constructor(factory: () => Worker) {
     this.factory = factory
@@ -27,9 +29,11 @@ class WorkerBridge {
     this.worker = worker
 
     worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-      const { type, svg, error } = e.data
+      const { type, svg, error, width, height } = e.data
       if (type === 'result' && svg) {
         this.result = svg
+        if (width) this.resultWidth = width
+        if (height) this.resultHeight = height
         this.status = 'done'
         this.worker = null
         worker.terminate()

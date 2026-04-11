@@ -14,7 +14,7 @@ export const registry: ToolMeta[] = [
       { key: 'jitter', label: 'Jitter', type: 'slider', default: 0, min: 0, max: 20, step: 0.5, unit: 'px', group: 'Variación' },
       { key: 'color', label: 'Color', type: 'color', default: '#1a1a1a', group: 'Color' },
       { key: 'image', label: 'Imagen base', type: 'upload', default: '', group: 'Fuente' },
-      { key: 'element', label: 'Figura elemento', type: 'upload', default: '', group: 'Fuente' },
+      { key: 'element', label: 'Figura elemento', type: 'element', default: '', group: 'Fuente' },
     ]
   },
   {

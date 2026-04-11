@@ -133,6 +133,23 @@ class ToolStateManager {
     delete this.uploads[key]
     this.hasPending = true
   }
+
+  element = $state<{ type: 'svg'; file: File; name: string } | { type: 'char'; value: string; font: string } | null>(null)
+
+  setElementSvg(file: File): void {
+    this.element = { type: 'svg', file, name: file.name }
+    this.hasPending = true
+  }
+
+  setElementChar(value: string, font: string): void {
+    this.element = { type: 'char', value, font }
+    this.hasPending = true
+  }
+
+  clearElement(): void {
+    this.element = null
+    this.hasPending = true
+  }
 }
 
 // Crea la instancia y la pone en context — llamar en la página raíz de la herramienta

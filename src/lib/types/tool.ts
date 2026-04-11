@@ -1,6 +1,6 @@
 import type { Component } from "svelte"
 
-export type ParamType = 'slider' | 'color' | 'select' | 'upload'
+export type ParamType = 'slider' | 'color' | 'select' | 'upload' | 'element'
 
 export interface ParamDefinition {
   key: string
@@ -24,10 +24,10 @@ export interface ToolMeta {
 }
 
 export interface ExportOptions {
-  format: 'png'
+  format: 'png' | 'svg'
   dpi: 72 | 150 | 300
-  width: number        // siempre mm internamente
-  height: number       // siempre mm internamente
+  width: number
+  height: number
   unit: 'px' | 'mm' | 'in'
 }
 
@@ -46,13 +46,19 @@ export interface WorkerRequest {
   exportOptions?: ExportOptions
   transferables?: {
     image?: ImageBitmap
-    element?: ImageBitmap
+  }
+  elementSvg?: string
+  elementChar?: {
+    value: string
+    font: string
   }
 }
 
 export interface WorkerResponse {
   type: 'result' | 'error' | 'progress'
   svg?: string
+  width?: number
+  height?: number
   progress?: number
   error?: string
 }
@@ -62,4 +68,5 @@ export interface ToolModule {
   worker: () => Worker
   previewSize: { width: number; height: number }
   component: Component
+  supportsSvg: boolean
 }

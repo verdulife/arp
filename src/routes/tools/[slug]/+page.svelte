@@ -22,7 +22,7 @@
 </script>
 
 <div class="flex h-full flex-col">
-	<Titlebar tool={data.tool} />
+	<Titlebar tool={data.tool} toolModule={data.toolModule} />
 	<div class="flex flex-1 overflow-hidden">
 		<Sidebar activeslug={data.tool.slug} />
 		<Canvas />

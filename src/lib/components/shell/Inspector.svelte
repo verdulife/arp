@@ -4,6 +4,7 @@
 	import { useWorkerBridge } from '$lib/workers/bridge.svelte';
 	import { Slider } from '$lib/components/ui/slider';
 	import { Separator } from '$lib/components/ui/separator';
+	import ElementPicker from '$lib/components/shell/ElementPicker.svelte';
 
 	let { tool }: { tool: ToolMeta } = $props();
 
@@ -27,17 +28,21 @@
 			transferList.push(bitmap);
 		}
 
-		if (toolState.uploads['element']) {
-			const bitmap = await createImageBitmap(toolState.uploads['element'].file);
-			transferables.element = bitmap;
-			transferList.push(bitmap);
+		let elementSvg: string | undefined;
+		if (toolState.element?.type === 'svg') {
+			elementSvg = await toolState.element.file.text();
 		}
 
 		bridge.run({
 			mode: 'preview',
 			params: JSON.parse(JSON.stringify(toolState.params)),
 			seed: toolState.seed,
-			transferables
+			transferables,
+			elementSvg,
+			elementChar:
+				toolState.element?.type === 'char'
+					? { value: toolState.element.value, font: toolState.element.font }
+					: undefined
 		});
 	}
 </script>
@@ -93,7 +98,7 @@
 							</div>
 							<div
 								class="cursor-pointer rounded-md border border-dashed p-3 text-center transition-colors hover:bg-accent
-    {toolState.uploads[param.key] ? 'border-foreground' : 'border-border'}"
+      {toolState.uploads[param.key] ? 'border-foreground' : 'border-border'}"
 								role="button"
 								tabindex="0"
 								ondragover={(e) => e.preventDefault()}
@@ -126,6 +131,8 @@
 									</p>
 								{/if}
 							</div>
+						{:else if param.type === 'element'}
+							<ElementPicker />
 						{/if}
 					</div>
 				{/each}
